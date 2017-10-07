@@ -27,3 +27,42 @@ exports.create = (req, res, next) => {
         }
     });
 }
+
+exports.login = (req, res) => {
+    if (!req.user) {
+        res.sendFile((path.join(__dirname + '/../views/login.html')));
+    }
+    else {
+        return res.redirect('/home');
+    }
+}
+
+exports.logout = (req, res) => {
+    req.logout();
+    res.redirect('/');
+}
+
+exports.saveOAuthUserProfile = (req, profile, done) => {
+    User.findOne({
+        provider: profile.provider,
+        providerId: profile.providerId
+    }, function (err, user) {
+        if (err) return done(err);
+        else {
+            if (!user) {
+                var possibleUsername = profile.username
+                    || (profile.email ? profile.email.split('@')[0] : '');
+                console.log('NAME: ' + profile.username);
+                User.findUniqueUsername(possibleUsername, null, (availableUsername) => {
+                    profile.username = availableUsername;
+                    user = new User(profile);
+                    user.save((err) => {
+                        if (err) { return req.res.redirect('/login'); }
+                        return done(err, user);
+                    })
+                });
+            }
+            else { return done(err, user); }
+        }
+    });
+}
